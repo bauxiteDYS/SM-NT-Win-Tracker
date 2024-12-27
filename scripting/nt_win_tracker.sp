@@ -7,23 +7,32 @@
 
 Database hDB = null;
 char g_mapName[64];
+char g_hostIP[32];
 
 public Plugin myinfo = {
 	name = "NT win tracker",
 	description = "Stores winning team and final scores for casual games into a database",
 	author = "bauxite",
-	version = "0.2.0",
-	url = "",
+	version = "0.2.1",
+	url = "https://github.com/bauxiteDYS/SM-NT-Win-Tracker",
 };
 
 public void OnConfigsExecuted()
 {
+	char ip[20];
+	char port[10];
+	
+	FindConVar("ip").GetString(ip, sizeof(ip));
+	FindConVar("hostport").GetString(port, sizeof(port));
+	Format(g_hostIP, sizeof(g_hostIP), "%s:%s", ip, port);
+	
+	GetCurrentMap(g_mapName, sizeof(g_mapName));
+	
 	Database.Connect(DB_Connect); // default connection I guess
 }
 
 public void OnMapEnd()
 {
-	GetCurrentMap(g_mapName, sizeof(g_mapName));
 	int winlimit = FindConVar("neo_score_limit").IntValue;
 	int jinScore = GetTeamScore(TEAM_JINRAI);
 	int nsfScore = GetTeamScore(TEAM_NSF);
@@ -42,7 +51,7 @@ public void OnMapEnd()
 	}
 	else if (nsfScore < winlimit && jinScore < winlimit)
 	{
-		LogMessage("[NT Win Tracker] Map ended before winlimit reached, not inserting score")
+		LogMessage("[NT Win Tracker] Map ended before winlimit reached, not inserting score");
 	}
 }
 
@@ -71,7 +80,7 @@ void DB_init()
 	(\
 	matchNumber INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, \
 	timeStamp INT NOT NULL, \
-	hostName VARCHAR(65) NOT NULL, \
+	hostIP VARCHAR(32) NOT NULL, \
 	mapName VARCHAR(65) NOT NULL, \
 	winTeam INT NOT NULL, \
 	jinScore INT NOT NULL, \
@@ -100,11 +109,11 @@ void DB_insertScore(int winTeam, int jinScore, int nsfScore)
 	
 	char defQuery[] = 	
 	"\
-	INSERT INTO nt_win_tracker(timeStamp, mapName, winTeam, jinScore, nsfScore) \
-	VALUES (%d, '%s', %d, %d, %d);\
+	INSERT INTO nt_win_tracker(timeStamp, hostIP, mapName, winTeam, jinScore, nsfScore) \
+	VALUES (%d, '%s', '%s', %d, %d, %d);\
 	";
 	
-	hDB.Format(newQuery, sizeof(newQuery), defQuery, timeStamp, g_mapName, winTeam, jinScore, nsfScore);
+	hDB.Format(newQuery, sizeof(newQuery), defQuery, timeStamp, g_hostIP, g_mapName, winTeam, jinScore, nsfScore);
 	hDB.Query(DB_insert_callback, newQuery, _, DBPrio_Normal);
 }
 
